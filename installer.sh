@@ -22,7 +22,20 @@ rm upload.conf.temp
 # set config file permissions
 chmod 0644 /etc/upload.conf
 # install systemD unit file
-cp upload.service /etc/systemd/system/multi-user.target.wants/upload.service
+
+cat >/etc/systemd/system/upload.service <<'EOF'
+[Unit]
+Description=Http based uploader
+After=network.target
+[Service]
+Type=simple
+ExecStart=/usr/bin/upload
+Restart=on-failure
+User=root
+[Install]
+WantedBy=multi-user.target
+EOF
+
 # set unit file permissions
 chmod 0644 /etc/systemd/system/multi-user.target.wants/upload.service
 # enable and start service
