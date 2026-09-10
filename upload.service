@@ -1,0 +1,11 @@
+[Unit]
+Description=Http based uploader
+After=network.target
+[Service]
+Type=simple
+ExecStart=/usr/bin/upload
+Restart=on-failure
+User=myuser
+Group=mygroup
+[Install]
+WantedBy=multi-user.target
