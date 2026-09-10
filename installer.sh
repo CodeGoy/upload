@@ -37,7 +37,7 @@ WantedBy=multi-user.target
 EOF
 
 # set unit file permissions
-chmod 0644 /etc/systemd/system/multi-user.target.wants/upload.service
+chmod 0644 /etc/systemd/system/upload.service
 # enable and start service
 systemctl enable upload.service
 systemctl start upload.service
