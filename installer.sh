@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # check if script is running as root
 if [[ $EUID -ne 0 ]]; then
     echo "Error: Please run as root." >&2
@@ -16,11 +17,11 @@ done
 # make temp path
 mkdir /tmp/codegoy
 # enter temp path
-cd /tmp/codegoy || echo "failed to enter temp path" && exit 1
+cd /tmp/codegoy
 # clone repo
 git clone https://github.com/CodeGoy/upload.git --depth 1
 # enter repo path
-cd upload || echo "failed to enter git path" && exit 1
+cd upload
 # build
 go mod init upload
 go mod tidy
