@@ -9,13 +9,13 @@ go mod init upload
 go mod tidy
 go build -o /usr/bin/upload .
 # copy config to /etc
-cp upload.conf upload.conf.tmp
+cp upload.conf upload.conf.temp
 confs=("endpoint" "path" "tlsport" "port" "cert" "key")
 for c in "${confs[@]}"; do
     echo "enter ${c}:"
     read -r var
     echo "parsed: ${var} for ${c}"
-    sed -i "s|^${c}=.*|${c}=${var}|" upload.conf.tmp
+    sed -i "s|^${c}=.*|${c}=${var}|" upload.conf.temp
 done
 cp upload.conf.temp /etc/upload.conf
 rm upload.conf.temp
