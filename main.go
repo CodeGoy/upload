@@ -129,22 +129,10 @@ func makeDir(path string) error {
 }
 
 func main() {
-	var c *Config
-	if os.Args[1] == "test" {
-		fmt.Println("Running tests... Loading local config file...")
-		var err error
-		c, err = loadConfig("./upload.conf")
-		if err != nil {
-			log.Printf("failed to load config: %v\n", err)
-			os.Exit(1)
-		}
-	} else {
-		var err error
-		c, err = loadConfig("/etc/upload.conf")
-		if err != nil {
-			log.Printf("failed to load config: %v\n", err)
-			os.Exit(1)
-		}
+	c, err := loadConfig("/etc/upload.conf")
+	if err != nil {
+		log.Printf("failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Config: %+v\n", c)
 	s := Server{}
