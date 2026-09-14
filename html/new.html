@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Upload {{ .Version }}</title>
+    <title>Upload  v{{ .Version }}</title>
     <style>
         body {
             background: #515151;
@@ -47,6 +47,10 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .title {
+            font-weight: bold;
+            font-size: x-large;
+        }
         /* grid */
         .gridParent {
             display: grid;
@@ -56,6 +60,8 @@
             grid-row-gap: 1px;
         }
         .about {
+            padding: 10px;
+            height: auto;
             grid-area: 1 / 1 / 2 / 7;
         }
         .fileList {
@@ -71,7 +77,7 @@
 <body>
 <div class="gridParent">
     <div class="border about">
-        <h2>Upload</h2><span>{{ .Version }}</span>
+        <span class="title">Upload v{{ .Version }}</span>
     </div>
     <div id="fileList" class="border fileList">
 
@@ -87,38 +93,44 @@
     let fileList = document.getElementById("fileList");
     let uploadButton = document.getElementById("uploadButton");
     let fileQueue = new Map();
-    uploadButton.addEventListener("click", () => {
-        console.log("upload clicked, list Queue:", fileQueue);
+    uploadButton.addEventListener("click", async () => {
         for (let [key, value] of fileQueue) {
-            console.log(`Uploading ${key}  ${value}`);
             let target = document.getElementById(key);
-            uploadFile(value, target.getElementsByTagName("progress")[0], target.getElementsByClassName("statusItem")[0]);
-            console.log("upload complete");
-            setTimeout(() => {
-                target.remove();
-            }, 10000)
+            try {
+                await uploadFile(value, target.getElementsByTagName("progress")[0], target.getElementsByClassName("statusItem")[0]);
+                fileQueue.delete(key);
+                setTimeout(() => {
+                    // TODO : fade element, animate list movement
+                    target.remove();
+                }, 5000)
+            } catch (err) {
+                console.error(err.message);
+            }
         }
     })
     let uploadFile = (file, progress, status) => {
-        let fd = new FormData();
-        fd.append("file", file);
-        let xr = new XMLHttpRequest();
-        xr.upload.addEventListener("progress", (evt) => {
-            let percent = (evt.loaded / evt.total) * 100;
-            progress.value = Math.round(percent);
-            status.innerHTML = Math.round(percent)+"%";
-        }, false);
-        xr.addEventListener("load", (evt) => {
-            status.innerHTML = "Status: Complete -> " + evt.target.responseText;
-        }, false);
-        xr.addEventListener("error", (evt) => {
-            status.innerHTML = "Status: Upload Failed -> " + evt.target.responseText;
-        }, false);
-        xr.addEventListener("abort", (evt) => {
-            status.innerHTML = "Status: Upload Aborted -> " + evt.target.responseText;
-        }, false);
-        xr.open("POST", uploadUrl);
-        xr.send(fd);
+        return new Promise((resolve, reject) => {
+            let fd = new FormData();
+            fd.append("file", file);
+            let xr = new XMLHttpRequest();
+            xr.upload.onprogress = (evt) => {
+                let percent = (evt.loaded / evt.total) * 100;
+                progress.value = Math.round(percent);
+                status.innerHTML = Math.round(percent) + "%";
+            };
+            xr.onload = () => {
+                if (xr.status >= 200 && xr.status < 300) {
+                    console.log(`${file.name} uploaded successfully`);
+                    resolve(xr.responseText);
+                } else {
+                    reject(new Error(`Upload failed for ${file.name}: ${xr.statusText}`));
+                }
+            };
+            xr.onerror = () => reject(new Error(`Network error while uploading ${file.name}`));
+            xr.onabort = () => reject(new Error(`Upload aborted for ${file.name}: ${xr.statusText}`));
+            xr.open("POST", uploadUrl);
+            xr.send(fd);
+        });
     };
     let formatBytes = (bytes, decimals = 2) => {
         if (!Number(bytes)) return '0 Bytes';
@@ -144,7 +156,7 @@
         nfd.id = fileID;
         nfd.classList.add("fileItemParent");
         nfd.classList.add("border");
-        // title child
+        // title
         let fileTitle = document.createElement("span");
         fileTitle.textContent = file.name;
         fileTitle.classList.add("no-wrap");
@@ -152,7 +164,7 @@
         fileTitle.classList.add("border");
         fileTitle.classList.add("fileItem");
         nfd.appendChild(fileTitle);
-        // size child
+        // size
         let fileSize = document.createElement("span");
         fileSize.classList.add("border");
         fileSize.classList.add("fileItem");
@@ -160,6 +172,7 @@
         nfd.appendChild(fileSize);
         // status
         let fileStatus = document.createElement("span");
+        fileStatus.classList.add("no-wrap");
         fileStatus.classList.add("statusItem");
         fileStatus.classList.add("border");
         fileStatus.classList.add("fileItem");
@@ -188,8 +201,7 @@
         if (event.dataTransfer.items) {
             [...event.dataTransfer.items].forEach((item) => {
                 if (item.kind === "file") {
-                    const file = item.getAsFile();
-                    addFile(file);
+                    addFile(item.getAsFile());
                 }
             });
         }
