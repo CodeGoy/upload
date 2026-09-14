@@ -58,7 +58,6 @@ func (s *Server) start() {
 			log.Panicf("r.FormFile(): %v\n", err)
 		}
 		defer func(MultipartForm *multipart.Form) {
-			fmt.Println("Removing MultipartForm cache")
 			err := MultipartForm.RemoveAll()
 			if err != nil {
 				log.Printf("failed to remove MultiPartForm cache: %v\n", err)
