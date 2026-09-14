@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload {{ .Version }}</title>
+    <style>
+        body {
+            background: #515151;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        progress {
+            background: #515151;
+        }
+        .border {
+            border: 1px solid #ff0000;
+        }
+        .button {
+            background: #000;
+            color: #fd4545;
+            padding: 10px;
+            margin: 5px;
+        }
+        .button:hover {
+            /* TODO:  */
+            filter: invert(1);
+        }
+        .fileItemParent {
+            display: flex;
+            width: auto;
+            padding: 10px 10px 10px 0px;
+        }
+        .fileItem {
+            color: #f0f0f0;
+            margin: 10px 10px 10px 10px;
+            padding: 10px 10px 10px 10px;
+        }
+        .fileTitle {
+            width: 100%;
+            overflow: hidden;
+        }
+        .no-wrap {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* grid */
+        .gridParent {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            grid-column-gap: 1px;
+            grid-row-gap: 1px;
+        }
+        .about {
+            grid-area: 1 / 1 / 2 / 7;
+        }
+        .fileList {
+            overflow: scroll;
+            grid-area: 2 / 1 / 10 / 6;
+            height: 100vh;
+        }
+        .controls {
+            grid-area: 2 / 6 / 10 / 7;
+        }
+    </style>
+</head>
+<body>
+<div class="gridParent">
+    <div class="border about">
+        <h2>Upload</h2><span>{{ .Version }}</span>
+    </div>
+    <div id="fileList" class="border fileList">
+
+    </div>
+    <div class="border controls">
+        <p id="selectFile" class="border button">Select File</p>
+        <p id="uploadButton" class="border button">Upload</p>
+    </div>
+</div>
+<script>
+    // TODO : hash file, confirm upload
+    let uploadUrl = "/{{ .Endpoint }}upload";
+    let fileList = document.getElementById("fileList");
+    let uploadButton = document.getElementById("uploadButton");
+    let fileQueue = new Map();
+    uploadButton.addEventListener("click", () => {
+        console.log("upload clicked, list Queue:", fileQueue);
+        for (let [key, value] of fileQueue) {
+            console.log(`Uploading ${key}  ${value}`);
+            let target = document.getElementById(key);
+            uploadFile(value, target.getElementsByTagName("progress")[0], target.getElementsByClassName("statusItem")[0]);
+            console.log("upload complete");
+            setTimeout(() => {
+                target.remove();
+            }, 10000)
+        }
+    })
+    let uploadFile = (file, progress, status) => {
+        let fd = new FormData();
+        fd.append("file", file);
+        let xr = new XMLHttpRequest();
+        xr.upload.addEventListener("progress", (evt) => {
+            let percent = (evt.loaded / evt.total) * 100;
+            progress.value = Math.round(percent);
+            status.innerHTML = Math.round(percent)+"%";
+        }, false);
+        xr.addEventListener("load", (evt) => {
+            status.innerHTML = "Status: Complete -> " + evt.target.responseText;
+        }, false);
+        xr.addEventListener("error", (evt) => {
+            status.innerHTML = "Status: Upload Failed -> " + evt.target.responseText;
+        }, false);
+        xr.addEventListener("abort", (evt) => {
+            status.innerHTML = "Status: Upload Aborted -> " + evt.target.responseText;
+        }, false);
+        xr.open("POST", uploadUrl);
+        xr.send(fd);
+    };
+    let formatBytes = (bytes, decimals = 2) => {
+        if (!Number(bytes)) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KiB', 'MiB', 'GiB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))}${sizes[i]}`;
+    };
+    let randomStr = (length) => {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
+    };
+    let addFile = (file) => {
+        let fileID = randomStr(16);
+        fileQueue.set(fileID, file);
+        // parent
+        let nfd = document.createElement("div");
+        nfd.id = fileID;
+        nfd.classList.add("fileItemParent");
+        nfd.classList.add("border");
+        // title child
+        let fileTitle = document.createElement("span");
+        fileTitle.textContent = file.name;
+        fileTitle.classList.add("no-wrap");
+        fileTitle.classList.add("fileTitle");
+        fileTitle.classList.add("border");
+        fileTitle.classList.add("fileItem");
+        nfd.appendChild(fileTitle);
+        // size child
+        let fileSize = document.createElement("span");
+        fileSize.classList.add("border");
+        fileSize.classList.add("fileItem");
+        fileSize.innerText = formatBytes(file.size);
+        nfd.appendChild(fileSize);
+        // status
+        let fileStatus = document.createElement("span");
+        fileStatus.classList.add("statusItem");
+        fileStatus.classList.add("border");
+        fileStatus.classList.add("fileItem");
+        fileStatus.innerText = "Waiting...";
+        nfd.appendChild(fileStatus);
+        // progress
+        let fileProgress = document.createElement("progress");
+        fileProgress.classList.add("border");
+        fileProgress.classList.add("fileItem");
+        fileProgress.max = 100;
+        fileProgress.min = 0;
+        fileProgress.value = 0;
+        nfd.appendChild(fileProgress);
+        fileList.appendChild(nfd);
+    };
+    // Drag'n'drop file event
+    fileList.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        fileList.style.color = "red";
+    });
+    fileList.addEventListener("dragleave",  () => {
+        fileList.style.color = "green";
+    });
+    fileList.addEventListener("drop", (event) => {
+        event.preventDefault();
+        if (event.dataTransfer.items) {
+            [...event.dataTransfer.items].forEach((item) => {
+                if (item.kind === "file") {
+                    const file = item.getAsFile();
+                    addFile(file);
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

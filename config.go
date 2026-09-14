@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -22,13 +21,11 @@ func loadConfig(configFile string) (*Config, error) {
 		return nil, fmt.Errorf("Error reading config file: %s", err)
 	}
 	c := &Config{}
-	for _, line := range strings.Split(string(bytes), "\n") {
+	for line := range strings.SplitSeq(string(bytes), "\n") {
 		if len(line) == 0 {
-			fmt.Println("empty line")
 			continue
 		}
 		if line[0:1] == "#" {
-			fmt.Println("line is a comment")
 			continue
 		}
 		split := strings.Split(line, "=")
@@ -51,15 +48,4 @@ func loadConfig(configFile string) (*Config, error) {
 		}
 	}
 	return c, nil
-}
-
-func testConfig() {
-	config, err := loadConfig("./upload.conf")
-	if err != nil {
-		log.Fatalf("Error loading config: %s", err)
-		return
-	}
-	fmt.Printf("Config: %+v\n", config)
-	//loadConfig("/etc/upload.conf")
-
 }

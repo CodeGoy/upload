@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -14,9 +15,9 @@ import (
 )
 
 var (
-	//go:embed html/root.html
+	//go:embed html/new.html
 	rootHtml string
-	version  = "0.0.1a"
+	version  = "0.0.1"
 )
 
 type Server struct {
@@ -129,12 +130,18 @@ func makeDir(path string) error {
 }
 
 func main() {
-	c, err := loadConfig("/etc/upload.conf")
-	if err != nil {
-		log.Printf("failed to load config: %v\n", err)
-		os.Exit(1)
+	c := &Config{}
+	configFilename := "/etc/upload.conf"
+	if _, err := os.Stat(configFilename); errors.Is(err, os.ErrNotExist) {
+		fmt.Println("Config file does not exist")
+	} else {
+		var err error
+		c, err = loadConfig(configFilename)
+		if err != nil {
+			log.Printf("failed to load config: %v\n", err)
+		}
+		fmt.Printf("Config: %+v\n", c)
 	}
-	fmt.Printf("Config: %+v\n", c)
 	s := Server{}
 	flag.StringVar(&s.endpoint, "endpoint", c.Endpoint, "HTTP endpoint ")
 	flag.StringVar(&s.port, "port", c.Port, "port to listen on")
