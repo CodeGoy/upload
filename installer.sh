@@ -56,13 +56,13 @@ EOF
 }
 
 case "$1" in
-    installService)
+    install)
         echo "installing service..."
-        install
+        installService
         ;;
-    updateService)
+    update)
         echo "updating service..."
-        update
+        updateService
         ;;
     *)
         echo "Invalid option: $1"
