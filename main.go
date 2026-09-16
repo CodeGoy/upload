@@ -55,7 +55,8 @@ func (s *Server) start() {
 	})
 	http.HandleFunc("/"+s.endpoint+"upload", func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
-			log.Panicf("r.FormFile(): %v\n", err)
+			log.Printf("r.FormFile(): %v\n", err)
+			return
 		}
 		defer func(MultipartForm *multipart.Form) {
 			err := MultipartForm.RemoveAll()
@@ -66,15 +67,18 @@ func (s *Server) start() {
 		file, handler, err := r.FormFile("file")
 		if err != nil {
 			log.Printf("r.FormFile(): %v\n", err)
+			return
 		}
 		defer func() {
 			if err := file.Close(); err != nil {
-				log.Panicf("%v\v", err)
+				log.Printf("%v\v", err)
+				return
 			}
 		}()
 		f, err := os.OpenFile(fmt.Sprintf("%s/%s", s.path, handler.Filename), os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
-			log.Panicf("%v\n", err)
+			log.Printf("%v\n", err)
+			return
 		}
 		defer func() {
 			if err := f.Close(); err != nil {
@@ -83,6 +87,7 @@ func (s *Server) start() {
 		}()
 		if _, err := io.Copy(f, file); err != nil {
 			log.Printf("%v\n", err)
+			return
 		}
 		response := fmt.Sprintf("Received File: %s", handler.Filename)
 		if _, err := w.Write([]byte(response)); err != nil {
