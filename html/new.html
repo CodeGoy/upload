@@ -13,7 +13,7 @@
             padding: 0;
         }
         progress {
-            background: #515151;
+            background: 0;
         }
         .border {
             border: 1px solid #ff0000;
@@ -26,20 +26,39 @@
         .button:hover {
             filter: invert(1);
         }
+        /* remove item overlay */
+        .removeItemOverlay {
+            background: rgba(1, 0, 0, 0.9);
+            width: 100%;
+            height: 4em;
+            z-index: 9999;
+            opacity: 0.0;
+            transition: opacity 500ms ease;
+            position: absolute;
+            text-align: center;
+            color: white;
+        }
+        .removeItemOverlay:hover {
+            opacity: 1.0;
+        }
+        /*           */
         .fileItemParent {
             display: flex;
-            width: auto;
-            padding: 10px 10px 10px 0px;
+            padding: 10px 10px 10px 0;
+            margin: 5px 0 5px 0;
         }
         .fileItem {
+            z-index: 2;
             color: #f0f0f0;
             margin: 10px 10px 10px 10px;
             padding: 10px 10px 10px 10px;
+            opacity: 1.0;
         }
         .fileTitle {
             width: 100%;
             overflow: hidden;
         }
+        /*        */
         .no-wrap {
             white-space: nowrap;
             overflow: hidden;
@@ -48,6 +67,16 @@
         .title {
             font-weight: bold;
             font-size: x-large;
+        }
+        .dropHere {
+            top: 50%;
+            position: relative;
+        }
+        .hide {
+            display: none;
+        }
+        #globalProgress {
+            float: right;
         }
         /* grid */
         .gridParent {
@@ -58,11 +87,11 @@
             grid-row-gap: 1px;
         }
         .about {
-            padding: 10px;
-            height: auto;
+            padding: 6px;
             grid-area: 1 / 1 / 2 / 7;
         }
         .fileList {
+            text-align: center;
             overflow: scroll;
             grid-area: 2 / 1 / 10 / 6;
             height: 100vh;
@@ -76,9 +105,10 @@
 <div class="gridParent">
     <div class="border about">
         <span class="title">Upload v{{ .Version }}</span>
+        <span id="globalProgress">Progress</span>
     </div>
     <div id="fileList" class="border fileList">
-
+        <h1 id="dropHere" class="dropHere">Drop files here</h1>
     </div>
     <div class="border controls">
         <p id="selectFileButton" class="border button">Select File</p>
@@ -86,11 +116,22 @@
     </div>
 </div>
 <script>
+    let globalProgress = document.getElementById('globalProgress');
+    let dropHere = document.getElementById('dropHere');
     // TODO : hash file, confirm upload
     let uploadUrl = "/{{ .Endpoint }}upload";
     let fileList = document.getElementById("fileList");
     let uploadButton = document.getElementById("uploadButton");
     let fileQueue = new Map();
+    let dropFileHereChange = () => {
+        if (dropHere.classList.contains('hide') && fileList.children.length === 1) {
+            dropHere.classList.remove('hide');
+        }
+        console.log(fileList.children.length);
+        if (fileQueue.size > 0 && fileList.children.length > 1) {
+            dropHere.classList.add('hide');
+        }
+    };
     uploadButton.addEventListener("click", async () => {
         for (let [key, value] of fileQueue) {
             let target = document.getElementById(key);
@@ -99,10 +140,7 @@
             try {
                 await uploadFile(value, target.getElementsByTagName("progress")[0], target.getElementsByClassName("statusItem")[0]);
                 fileQueue.delete(key);
-                setTimeout(() => {
-                    // TODO : fade element, animate list movement
-                    target.remove();
-                }, 2000)
+                // TODO : move to delete en
             } catch (err) {
                 console.error(err.message);
             }
@@ -113,7 +151,15 @@
             let fd = new FormData();
             fd.append("file", file);
             let xr = new XMLHttpRequest();
+            let startTime = performance.now();
             xr.upload.onprogress = (evt) => {
+                const durationInSeconds = (performance.now() - startTime) / 1000;
+                if (durationInSeconds > 0) {
+                    const bitsSent = evt.loaded * 8;
+                    const megabitsSent = bitsSent / 1024000;
+                    const speedMbps = (megabitsSent / durationInSeconds).toFixed(2);
+                    globalProgress.innerText = `${speedMbps}Mbps`;
+                }
                 let percent = (evt.loaded / evt.total) * 100;
                 progress.value = Math.round(percent);
                 status.innerHTML = Math.round(percent) + "%";
@@ -185,15 +231,30 @@
         fileProgress.min = 0;
         fileProgress.value = 0;
         nfd.appendChild(fileProgress);
+        // Remove overlay
+        let remove = document.createElement("span");
+        remove.classList.add("removeItemOverlay");
+        remove.id = "removeItemOverlay";
+        remove.innerText = "Remove";
+        remove.onclick = () => {
+            if (fileQueue.has(fileID)) {
+                fileQueue.delete(fileID);
+            }
+            nfd.remove();
+            dropFileHereChange();
+        };
+        nfd.appendChild(remove);
         fileList.appendChild(nfd);
+        dropFileHereChange();
     };
     // Drag'n'drop file event
     fileList.addEventListener("dragover", (e) => {
         e.preventDefault();
-        fileList.style.color = "red";
+        fileList.style.filter = "brightness(50)";
+
     });
     fileList.addEventListener("dragleave",  () => {
-        fileList.style.color = "green";
+        fileList.style.filter = "brightness(100)";
     });
     fileList.addEventListener("drop", (event) => {
         event.preventDefault();
