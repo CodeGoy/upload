@@ -4,13 +4,26 @@
     <meta charset="UTF-8">
     <title>Upload  v{{ .Version }}</title>
     <style>
-        body {
-            background: #515151;
-            width: 100%;
+        body, html{
             height: 100%;
-            overflow: hidden;
+            width: 100%;
             margin: 0;
-            padding: 0;
+            background: #515151;
+            overflow: hidden;
+        }
+        .container {
+            display: grid;
+            grid-template-rows: 50px 1fr 106px;
+            width: 100vw;
+            height: 100vh;
+        }
+        #about {
+            padding: 6px;
+        }
+        #fileList {
+            text-align: center;
+            overflow-y: scroll;
+            overflow-x: hidden;
         }
         progress {
             background: 0;
@@ -41,24 +54,25 @@
         .removeItemOverlay:hover {
             opacity: 1.0;
         }
-        /*           */
         .fileItemParent {
+            background: #490000;
             display: flex;
             padding: 10px 10px 10px 0;
             margin: 5px 0 5px 0;
+            transition: background-color 500ms linear;
         }
         .fileItem {
+            background: #000000;
             z-index: 2;
             color: #f0f0f0;
-            margin: 10px 10px 10px 10px;
-            padding: 10px 10px 10px 10px;
+            margin: 5px;
+            padding: 5px;
             opacity: 1.0;
         }
         .fileTitle {
             width: 100%;
             overflow: hidden;
         }
-        /*        */
         .no-wrap {
             white-space: nowrap;
             overflow: hidden;
@@ -78,43 +92,25 @@
         #globalProgress {
             float: right;
         }
-        /* grid */
-        .gridParent {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            grid-template-rows: repeat(9, 1fr);
-            grid-column-gap: 1px;
-            grid-row-gap: 1px;
-        }
-        .about {
-            padding: 6px;
-            grid-area: 1 / 1 / 2 / 7;
-        }
-        .fileList {
-            text-align: center;
-            overflow: scroll;
-            grid-area: 2 / 1 / 10 / 6;
-            height: 100vh;
-        }
-        .controls {
-            grid-area: 2 / 6 / 10 / 7;
-        }
     </style>
 </head>
 <body>
-<div class="gridParent">
-    <div class="border about">
-        <span class="title">Upload v{{ .Version }}</span>
-        <span id="globalProgress">Progress</span>
+    <div class="container">
+        <div id="about" class="border">
+            <span class="title">Upload</span>
+            <label>
+                AutoRemove <input id="autoRemoveInput" type="checkbox" checked>
+            </label>
+            <span id="globalProgress">Progress</span>
+        </div>
+        <div id="fileList" class="border">
+            <h1 id="dropHere" class="dropHere">Drop files here</h1>
+        </div>
+        <div id="controls" class="border">
+            <p id="selectFileButton" class="border button">Select File</p>
+            <p id="uploadButton" class="border button">Upload</p>
+        </div>
     </div>
-    <div id="fileList" class="border fileList">
-        <h1 id="dropHere" class="dropHere">Drop files here</h1>
-    </div>
-    <div class="border controls">
-        <p id="selectFileButton" class="border button">Select File</p>
-        <p id="uploadButton" class="border button">Upload</p>
-    </div>
-</div>
 <script>
     let globalProgress = document.getElementById('globalProgress');
     let dropHere = document.getElementById('dropHere');
@@ -132,15 +128,26 @@
             dropHere.classList.add('hide');
         }
     };
+    let autoRemove = true;
+    let autoRemoveInput = document.getElementById("autoRemoveInput");
+    autoRemoveInput.addEventListener("change", () => {
+        autoRemove = autoRemoveInput.checked;
+        console.log(autoRemove);
+    })
     uploadButton.addEventListener("click", async () => {
         for (let [key, value] of fileQueue) {
             let target = document.getElementById(key);
-            target.style.background = "#000000";
+            target.style.background = "#236000";
             target.focus({preventScroll: false});
+            target.scrollIntoView({behavior: "smooth", block: "center", inline: "nearest"});
             try {
                 await uploadFile(value, target.getElementsByTagName("progress")[0], target.getElementsByClassName("statusItem")[0]);
                 fileQueue.delete(key);
-                // TODO : move to delete en
+                if (autoRemove) {
+                    setTimeout(() => {
+                        target.remove();
+                    }, 3500)
+                }
             } catch (err) {
                 console.error(err.message);
             }
@@ -252,7 +259,6 @@
         e.preventDefault();
         fileList.style.filter = "brightness(1)";
         fileList.style.background = "#3e3e3e";
-
     });
     fileList.addEventListener("dragleave",  () => {
         fileList.style.filter = "brightness(1)";
