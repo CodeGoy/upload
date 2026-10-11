@@ -6,17 +6,22 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+function buildProgram() {
+    echo "build program"
+    go build -o /usr/bin/upload .
+}
+
 function updateService() {
     systemctl stop upload.service
     git pull
-    go build -o /usr/bin/upload .
+    buildProgram
     systemctl start upload.service
 }
 
 function installService() {
     go mod init upload
     go mod tidy
-    go build -o /usr/bin/upload .
+    buildProgram
     # copy config to /etc
     cp upload.conf upload.conf.temp
     confs=("endpoint" "path" "tlsport" "port" "cert" "key")
@@ -49,9 +54,6 @@ EOF
     systemctl enable upload.service
     systemctl start upload.service
     systemctl status upload.service
-    # cleanup
-    cd / || exit 1 && echo "failed to change path to root"
-    rm -rf /tmp/codegoy
     echo "upload program is now installed"
 }
 

@@ -89,6 +89,7 @@ func (s *Server) start() {
 			log.Printf("%v\n", err)
 			return
 		}
+		log.Printf("received file %s from %s\n", handler.Filename, r.RemoteAddr)
 		response := fmt.Sprintf("Received File: %s", handler.Filename)
 		if _, err := w.Write([]byte(response)); err != nil {
 			log.Printf("%v\n", err)
